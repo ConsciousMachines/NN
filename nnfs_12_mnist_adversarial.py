@@ -2,6 +2,7 @@ import pickle
 import gzip
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
@@ -42,13 +43,13 @@ def feedforward(a):
 
 
 # params
-batch_size = 9
-eta = 3.0
+batch_size = 16
+eta = 1.0
 np.random.seed(1)
 num_inp = 784
 num_out = 10
 # layer                   0 1 2 3
-hidden_structure = [num_inp,30,30,num_out]
+hidden_structure = [num_inp,30,num_out]
 B = [None] + [np.random.randn(y, 1) for y in hidden_structure[1:]]
 W = [None] + [np.random.randn(y, x) for x, y in zip(hidden_structure[:-1], hidden_structure[1:])]
 
@@ -98,3 +99,66 @@ for _e in range(30): # for each epoch
     __evaluate = sum(int(x == y) for (x, y) in __test_results)
     print("Epoch {} : {} / {}".format(_e, __evaluate, len(te_data)))
 
+
+
+_net_spec = 'i_30_o'
+with open(r'C:\Users\pwnag\Desktop\sup\deep_larn\mnist_W_' + _net_spec, 'wb') as _f:
+    pickle.dump(W,_f)
+with open(r'C:\Users\pwnag\Desktop\sup\deep_larn\mnist_B_' + _net_spec, 'wb') as _f:
+    pickle.dump(B,_f)
+
+
+
+
+
+
+#          A D V E R S A R I A l   E X A M P l E 
+__id3adv = np.zeros([1, num_out, num_out]) # we need to update this thing because it relies on batch_size
+__id3adv[:,__idx,__idx] = 1
+
+def show_digit(digit_array): # https://www.pythonpool.com/matplotlib-cmap/
+    plt.imshow(digit_array.reshape(28, 28), cmap='plasma')
+    plt.xticks([])
+    plt.yticks([])
+    plt.show()
+
+def belief_graph(input):
+    plt.bar([0,1,2,3,4,5,6,7,8,9], input)
+    plt.show()
+
+
+lam = 0.05
+adv_want = one_hot_encode(1).reshape([10,1])  # desired output: 1
+adv_prior = _tr[0][17,:].reshape([784,1])     # an 8
+x = np.zeros([784,1]) # start 
+
+for _poop in range(1000):
+
+    # forward pass 
+    input = x
+    z_s = [None]
+    h_s = [x]
+    for j in range(1, len(hidden_structure)):
+        z = W[j] @ input + B[j]        
+        input = sigmoid(z)                
+        z_s.append(z)
+        h_s.append(input)
+
+    # get the jacobians and gradients
+    jacobians = [np.einsum('ij,il->lij',W[j].T, sigmoidq(h_s[j-1])) for j in range(2, len(hidden_structure))]
+    cumul_jacob = [None for i in jacobians] + [__id3adv] 
+    for j in range(-1,-len(jacobians)-1,-1):
+        cumul_jacob[j-1] = np.einsum('pij,pjk->pik', jacobians[j], cumul_jacob[j]) # matmul in inner 2 dimensions
+
+    # update x
+    error = input - adv_want
+    grad_C_wrt_X = np.expand_dims(np.einsum('aq,io,qia->o', error, W[1], cumul_jacob[0]), 1) # W[1].T @ cumul_jacob[0].squeeze() @ error
+    x -= grad_C_wrt_X + lam * (x - adv_prior) # regularize to be adversarial image 
+
+
+
+
+#show_digit(adv_prior)
+#belief_graph(adv_want.squeeze())
+show_digit(x)
+belief_graph(input.squeeze())
