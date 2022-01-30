@@ -1,5 +1,3 @@
-# I took apart Nielsen's NN code. it turned out to be very similar to what I made
-# I thought there was some crazy matrix algebra for batching. no. its just a cheap for loop
 import pickle
 import gzip
 import random
@@ -33,8 +31,8 @@ va_data = list(zip(va_x, _va[1])) # list of tuples of (x,y)
 te_data = list(zip(te_x, _te[1]))
 
 def feedforward(a):
-    for b, w in zip(B, W):
-        a = sigmoid(w @ a + b)
+    for _i in range(1, len(B)):
+        a = sigmoid(W[_i] @ a + B[_i])
     return a
 
 ###############################################################################
@@ -61,55 +59,46 @@ __id3[:,__idx,__idx] = 1
 losses = []
 
 
-#for _e in range(30): # for each epoch
-_e = 0
+for _e in range(30): # for each epoch
 
-random.seed(10)
-random.shuffle(tr_data) # shuffle data 
-mini_batches = [tr_data[k:k+batch_size] for k in range(0, len(tr_data), batch_size)] # list of mini_batches
+    for _poop in range(50000 // batch_size):
 
-
-#for mini_batch in mini_batches: # loop over mini batches
-mini_batch = mini_batches[0]
-
-mini_batch[0]
-type(mini_batch[0][1])
-# list of tuples of numpy arrays 
-# [(x,y), (x,y), (x,y), (x,y), (x,y)]
-
-# pick 10 random indices out of 50000
-__idx = np.random.choice(np.arange(50000),10)
-_tr[0][__idx,:].shape
-tr_y[__idx,:].shape
-
-__b = 0
-batch_x = _tr[0][__b*batch_size:(__b + 1)*batch_size,:].T
-batch_y = tr_y[__b*batch_size:(__b + 1)*batch_size,:].T
-
-# forward pass 
-input = batch_x
-z_s = [None]
-h_s = [batch_x]
-for j in range(1, len(hidden_structure)):
-    z = W[j] @ input + B[j]        # weighted input
-    input = sigmoid(z)                 # hidden output
-    z_s.append(z)
-    h_s.append(input)
+        # create batch
+        __idx = np.random.choice(np.arange(50000),batch_size)
+        batch_x = _tr[0][__idx,:].T
+        batch_y = tr_y[__idx,:].T
 
 
-# calculate cost
-error = input - batch_y
-losses.append(np.sum(error ** 2))
+        # forward pass 
+        input = batch_x
+        z_s = [None]
+        h_s = [batch_x]
+        for j in range(1, len(hidden_structure)):
+            z = W[j] @ input + B[j]        
+            input = sigmoid(z)                
+            z_s.append(z)
+            h_s.append(input)
 
 
-jacobians = [np.einsum('ij,il->lij',W[j].T, sigmoidq(h_s[j-1])) for j in range(2, len(hidden_structure))]
-cumul_jacob = [None for i in jacobians] + [__id3] 
-for j in range(-1,-len(jacobians)-1,-1):
-    cumul_jacob[j-1] = np.einsum('pij,pjk->pik', jacobians[j], cumul_jacob[j]) # matmul in inner 2 dimensions
+        # calculate cost
+        error = input - batch_y
+        losses.append(np.sum(error ** 2))
 
 
-# update weights 
-common = (eta / batch_size) * error * sigmoidq(h_s[-1]) # batch_size scalars
-for j in range(1, len(hidden_structure)):
-    B[j] -= np.expand_dims(np.einsum('lj,jkl->k', common, cumul_jacob[j-1]), 1)
-    W[j] -= np.einsum('ij,jhi,wj->hw', common, cumul_jacob[j-1], h_s[j-1])
+
+        jacobians = [np.einsum('ij,il->lij',W[j].T, sigmoidq(h_s[j-1])) for j in range(2, len(hidden_structure))]
+        cumul_jacob = [None for i in jacobians] + [__id3] 
+        for j in range(-1,-len(jacobians)-1,-1):
+            cumul_jacob[j-1] = np.einsum('pij,pjk->pik', jacobians[j], cumul_jacob[j]) # matmul in inner 2 dimensions
+
+
+        # update weights 
+        common = (eta / batch_size) * error * sigmoidq(h_s[-1]) # batch_size scalars
+        for j in range(1, len(hidden_structure)):
+            B[j] -= np.expand_dims(np.einsum('lj,jkl->k', common, cumul_jacob[j-1]), 1)
+            W[j] -= np.einsum('ij,jhi,wj->hw', common, cumul_jacob[j-1], h_s[j-1])
+
+    # test on te_data
+    __test_results = [(np.argmax(feedforward(x)), y) for (x, y) in te_data]
+    __evaluate = sum(int(x == y) for (x, y) in __test_results)
+    print("Epoch {} : {} / {}".format(_e, __evaluate, len(te_data)))
