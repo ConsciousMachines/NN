@@ -68,6 +68,24 @@ def CrossEntropyLoss(wts, x, y):
     return - np.sum(y * conv_apply(wts, x)) + 0.01 * reg
 
 
+def accuracy(wts):
+    preds = []
+    num_batches = (50_000 // batch_size) + 1
+    for i in range(num_batches):
+        _start = i * batch_size
+        _end = np.minimum((i + 1) * batch_size, 50_000)
+        preds.append(conv_apply(wts, X[_start:_end,:,:,:]))
+    return np.sum(np.argmax(np.concatenate(preds).squeeze(), axis=1) == labels)
+
+
+@jax.jit
+def update(opt_state, __idx):
+    x, y = X[__idx], Y[__idx] 
+    g = jax.grad(CrossEntropyLoss)(opt_get_weights(opt_state), x, y)
+    opt_state = opt_update(_e, g, opt_state)
+    return opt_state, None
+
+
 batch_size = 256
 epochs = 25
 learning_rate = np.array(1/1e4)
@@ -84,7 +102,6 @@ opt_init, opt_update, opt_get_weights = optimizers.sgd(learning_rate)
 opt_state = opt_init(wts)
 
 
-
 for _e in range(epochs):
 
 
@@ -95,61 +112,31 @@ for _e in range(epochs):
     indices = np.concatenate([perm, more],1).reshape([num_batches, batch_size])
 
 
-    losses = [] 
     s = time.time()
-    for i in range(num_batches):
+    
+    #for i in range(num_batches):
+    #    __idx = indices[i]
+    #    x, y = X[__idx], Y[__idx] 
+    #    g = jax.grad(CrossEntropyLoss)(opt_get_weights(opt_state), x, y)
+    #    opt_state = opt_update(_e, g, opt_state)
 
-        __idx = indices[i]
-        x, y = X[__idx], Y[__idx] 
+    opt_state, _ = jax.lax.scan(update, opt_state, indices) # fold update function over indices
+    
 
-        loss, g = jax.value_and_grad(CrossEntropyLoss)(opt_get_weights(opt_state), x, y)
-        opt_state = opt_update(_e, g, opt_state)
-        losses.append(loss) 
-
-    print(f"T: {time.time() - s}\tCrossEntropyLoss : {np.array(losses).mean()}")
-
-
-
-# Q: I have two accuracy functions below, one says i get 10% and the other 50%. wtf?
-
-
-
-@jax.jit 
-def test_acc(wts):
-    return np.sum(jax.vmap(lambda x, y: np.equal(np.argmax(conv_apply(wts, np.expand_dims(x, 0))), y))(X[:2000], labels[:2000])) # vmap over test arrays
-
-test_acc(wts)
-
-
-ithub
+    wts = opt_get_weights(opt_state)
+    print(f"T: {time.time() - s}\tAcc : {accuracy(wts)}")
 
 
 
 
 
-def MakePredictions(weights, input_data, batch_size=32):
-    batches = np.arange((input_data.shape[0]//batch_size)+1) ### Batch Indices
-
-    preds = []
-    for batch in batches:
-        if batch != batches[-1]:
-            start, end = int(batch*batch_size), int(batch*batch_size+batch_size)
-        else:
-            start, end = int(batch*batch_size), None
-
-        X_batch = input_data[start:end]
-
-        if X_batch.shape[0] != 0:
-            preds.append(conv_apply(weights, X_batch))
-
-    return preds
 
 
 
 
-train_preds = MakePredictions(opt_get_weights(opt_state), X, batch_size)
-train_preds = np.concatenate(train_preds).squeeze() ## Combine predictions of all batches
-train_preds = np.argmax(train_preds, axis=1)
 
-train_preds.shape
-np.sum(train_preds == labels)
+
+
+
+
+
