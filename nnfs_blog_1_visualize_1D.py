@@ -510,9 +510,6 @@ imageio.mimsave(fig_dir + '\\movie.gif', images, duration = 0.05)
 
 # but i will do this after the xor, sine examples since they're simpler. 
 
-# NOTE: to visualize a layer that is R2 -> R2, there should be two graphs:
-# 1. the input data from the input dimension, together with the 2 logistic regression lines (and their intersection / decision area)
-# 2. the data transformed (imagine putting a grid in this part too)
 
 np.random.seed(0)
 x_axis = np.arange(100)
@@ -559,7 +556,7 @@ for _e in range(20_000):
     for i in _g: i.grad = 0
 
 # now the two hidden units are two classifiers. 
-pred = _layer2.value
+pred = _layer3.value
 pred[pred > 0.5] = 1
 pred[pred <= 0.5] = 0
 np.sum(pred - labels) # ok we got 100% accuracy  
