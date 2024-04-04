@@ -1,8 +1,19 @@
 # Neural Networks From First Principles
 
-For people who like to understand how things work by building a small version of it from scratch, it has never been a better time to learn (make) neural networks. This is my journey to implement NNs from first principles, one neuron at a time. 
+This is my journey to implement NNs from first principles, one neuron at a time. 
+
+In [this notebook](https://github.com/ConsciousMachines/NN/blob/main/nnfs_blog_1_visualize_1D.py) we build a neural network with 2 neurons in layer 1, and 1 neuron in layer 2. We then visualize how it learns to separate the following data:
+
+[![Alt Text](https://github.com/ConsciousMachines/NN/blob/main/img/anim_1.gif)](soyboy)
+
+We take things up a notch in [this other notebook](https://github.com/ConsciousMachines/NN/blob/main/nnfs_blog_3_visualize_2D_spiral.py) to visualize how neural networks bend space to make the data linearly separable in the final layer:
+
+![Alt Text](https://github.com/ConsciousMachines/NN/blob/main/img/anim_3.gif)
+
+For people who like to understand how things work by building a small version of it from scratch, it has never been a better time to learn (make) neural networks. In the rest of the notebooks we build up the following networks:
 
 # Step 1: XOR
+
 All the math and under the hood knowledge you will need is in chapter 1 of Nielsen's awesome blog: (don't read the code! you will make it yourself)
 
 http://neuralnetworksanddeeplearning.com/chap1.html
